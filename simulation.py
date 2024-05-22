@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.ndimage import distance_transform_edt
 from tqdm import tqdm
 from numba import cuda
 
 from analysis import SimulationResult
 from model import Model
-from sources import Source, ParametricSource
+from sources import Source
 from filtering import lp_filter, lp_filter2, lp_butter_filter
 
 from cuda_kernels_2D import (
