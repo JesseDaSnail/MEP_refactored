@@ -23,6 +23,17 @@ class SimulationResult:
         self.subsample_space = subsample_space
 
     def plot_slices_time(self, window_size: int = None, vlimit: float = None):
+        """
+        Plots slices of the pressure field along the time axis at different depths.
+
+        Parameters:
+            window_size (int, optional): The size of the window to plot around the maximum pressure value. Defaults to None.
+            vlimit (float, optional): The upper limit for the y-axis of the plot. Defaults to None.
+
+        Returns:
+            None
+        """
+
         # Unpack variables
         p = self.p
         dr = self.model.dr * self.subsample_space
@@ -49,15 +60,12 @@ class SimulationResult:
                 idx2 = int(max_index + window_size)
 
                 ax[i, j].plot(t_values[idx1:idx2], p[idx1:idx2, 2, to_plot])
-                # fig.colorbar(im, shrink=0.3)
-                # fig.colorbar(im, shrink=0.8)
+
                 ax[i, j].set_title(f"Depth: {to_plot*dr:.2f} m")
                 ax[i, j].set_xlabel("t (s)")
                 ax[i, j].set_ylabel("p (Pa)")
                 ax[i, j].set_ylim(-vlimit, vlimit)
                 itr += 1
-        # plt.subplots_adjust(wspace=0.4,
-        #                     hspace=-0.8)
 
         plt.tight_layout()
         plt.plot()
@@ -65,6 +73,20 @@ class SimulationResult:
     def plot_snapshots(
         self, vlimit: float = None, mirror: bool = False, title_type: str = "iteration"
     ):
+        """
+        Plots snapshots of the result.
+
+        Args:
+            vlimit (float, optional): The limits for the colorbar of the plot. Defaults to None.
+            mirror (bool, optional): Whether to mirror the pressure field over the z-axis. Defaults to False.
+            title_type (str, optional): The type of title to display. Must be either "iteration" or "time". Defaults to "iteration".
+
+        Raises:
+            ValueError: If title_type is not either "iteration" or "time".
+
+        Returns:
+            None
+        """
         if title_type not in ["iteration", "time"]:
             raise ValueError("title_type must be either 'iteration' or 'time'")
 
@@ -126,6 +148,18 @@ class SimulationResult:
         frame_interval: int = 10,
         vlimit: float = None,
     ):
+        """
+        Generates a GIF animation from the pressure field data.
+
+        Parameters:
+            filename (str): The name of the file to save the GIF animation.
+            fps (int, optional): The frames per second of the animation. Defaults to 5.
+            frame_interval (int, optional): The interval between frames in the pressure field data. Defaults to 10.
+            vlimit (float, optional): The upper limit for the colorbar of the animation. Defaults to None.
+
+        Returns:
+            None
+        """
         # Create a figure and axis
         fig, ax = plt.subplots()
 
@@ -182,8 +216,7 @@ class SimulationResult:
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculate the harmonic progression of the pressure response along a line.
-        This line is defined by a starting point and an angle in the xy-plane and
-        the z-direction.
+        This line is defined by a starting point and an angle in the rz-plane.
 
         Parameters
         ----------
@@ -194,11 +227,15 @@ class SimulationResult:
         z_start : int, optional
             z-coordinate of the starting point of the line, by default None
         angle : float, optional
-            Angle of the line in the z-direction, by default 0
+            Angle of the line with respect to the z-axis, by default 0
         include_subharmonic : bool, optional
             Flag indicating whether to include the subharmonic, by default False
         subharmonic_freq : float, optional
             Frequency of the subharmonic, by default None
+        scaling_factor : float, optional
+            Scaling factor for the harmonic amplitude, by default None
+        normalize : bool, optional
+            Flag indicating whether to normalize the harmonic progression, by default True
 
         Returns
         -------
@@ -280,7 +317,25 @@ class SimulationResult:
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Select values from the 3D array along a line. This line is defined by a
-        starting point and an angle in the xy-plane and the z-direction.
+        starting point and an angle in the rz-plane.
+
+        Parameters
+        ----------
+        r_start : int, optional
+            r-coordinate index of the starting point of the line, by default None
+        z_start : int, optional
+            z-coordinate index of the starting point of the line, by default None
+        angle : float, optional
+            Angle of the line with respect to the z-axis, by default 0
+
+        Returns
+        -------
+        selected_values : np.ndarray
+            Values selected along the line
+        r_indices : np.ndarray
+            Indices of the selected values along the r-axis
+        z_indices : np.ndarray
+            Indices of the selected values along the z-axis
         """
         p = self.p
 
@@ -290,11 +345,11 @@ class SimulationResult:
             z_start = 0
 
         t = np.arange(0, np.sqrt(p.shape[1] ** 2 + p.shape[2] ** 2))
-        x = r_start + np.sin(angle) * t
+        r = r_start + np.sin(angle) * t
         z = z_start + np.cos(angle) * t
 
         # Round to the nearest integer to get indices
-        r_indices = np.rint(x).astype(int)
+        r_indices = np.rint(r).astype(int)
         z_indices = np.rint(z).astype(int)
 
         # Mask indices outside of array bounds
@@ -323,8 +378,6 @@ class SimulationResult:
         ----------
         frequency : float
             Frequency of the fourier coefficient.
-        y : int, optional
-            y-coordinate of the slice to compute the fourier coefficient, by default None
 
         Returns
         -------
@@ -339,30 +392,44 @@ class SimulationResult:
         correlation_function = np.exp(
             -1j * 2 * np.pi * frequency * np.arange(p.shape[0]) * dt
         )
-        for x in tqdm(range(p.shape[1])):
+        for r in tqdm(range(p.shape[1])):
             for z in range(p.shape[2]):
-                lobe_array[x, z] = np.abs(
+                lobe_array[r, z] = np.abs(
                     np.correlate(
-                        self.p[:, x, z],
+                        self.p[:, r, z],
                         correlation_function,
                     )
                 )
 
         return lobe_array * 2 / p.shape[0]
 
-    def get_lobes_all(self, scaling_factor: float, subsample: int = 1) -> np.ndarray:
+    def get_lobes_all(
+        self, scaling_factor: float, subsample_space: int = 1
+    ) -> np.ndarray:
+        """
+        Computes the Fourier coefficients of the pressure response over the whole domain for each frequency.
+
+        Parameters:
+            scaling_factor (float): The scaling factor for the Fourier coefficients.
+            subsample_space (int, optional): The spatial subsampling factor for the pressure field. Defaults to 1.
+
+        Returns:
+            numpy.ndarray: An array of frequencies.
+            numpy.ndarray: An array of Fourier coefficients.
+
+        """
         mem_max = 1e9
         if self.p.nbytes > mem_max:
             factor = self.p.nbytes / mem_max
-            subsample = int(np.ceil(factor))
-            print(f"Array too large for GPU. Setting subsample to {subsample}.")
+            subsample_space = int(np.ceil(factor))
+            print(f"Array too large for GPU. Setting subsample to {subsample_space}.")
 
         p = self.p
         dt = self.model.dt * self.subsample_time
 
         frequencies = np.fft.fftfreq(p.shape[0], dt)
 
-        p_device = cp.asarray(p[:, ::subsample, ::subsample])
+        p_device = cp.asarray(p[:, ::subsample_space, ::subsample_space])
         lobe_array_device = cp.fft.fft(p_device, axis=0)
         lobe_array_device = cp.abs(lobe_array_device)
         lobe_array_device *= scaling_factor
@@ -377,6 +444,20 @@ class SimulationResult:
     def get_lobes_all_split(
         self, scaling_factor: float, subsample: int = 1
     ) -> np.ndarray:
+        """
+        Same as `get_lobes_all` but splits the domain to make it more memory efficient.
+        Computes the Fourier coefficients of the pressure response over the whole domain for each frequency.
+        The pressure field is split into subdomains and the Fourier coefficients are computed for each subdomain.
+
+        Parameters:
+            scaling_factor (float): The scaling factor for the Fourier coefficients.
+            subsample (int, optional): The spatial subsampling factor for the pressure field. Defaults to 1.
+
+        Returns:
+            numpy.ndarray: An array of frequencies.
+            numpy.ndarray: An array of Fourier coefficients.
+
+        """
         mem_max = 1e9
         if self.p.nbytes > mem_max:
             factor = self.p.nbytes / mem_max
@@ -428,6 +509,14 @@ def get_frequency_response(
     """
     Calculates the frequency response of a pressure response by applying a
     Fourier transform.
+
+    Parameters:
+        pressure_response (ndarray): One-dimensional array containing the pressure response.
+        dt (float): Time step between samples.
+
+    Returns:
+        freq_array (ndarray): Array of frequencies.
+        frequency_response (ndarray): Array of Fourier coefficients.
     """
     if pressure_response.ndim != 1:
         raise ValueError("pressure_response must be one dimensional.")
@@ -451,6 +540,7 @@ def get_dB_response(
     Parameters:
         pressure_response (ndarray): One-dimensional array containing the pressure response.
         dt (float): Time step between samples.
+        scaling_factor (float): The scaling factor for the Fourier coefficients.
         normalize (bool, optional): Flag indicating whether to normalize the dB response.
             Defaults to True.
 
