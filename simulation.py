@@ -4,7 +4,6 @@ from scipy.ndimage import distance_transform_edt
 from tqdm import tqdm
 from numba import cuda
 
-from operators import *
 from analysis import SimulationResult
 from model import Model
 from sources import Source, ParametricSource
