@@ -22,13 +22,14 @@ class Source:
         Initialize a source.
 
         Parameters:
-        - ir, iy, iz: Index coordinates of the source.
+        - ir, iz: Index coordinates of the source.
         - iwidth: Source width in number of grid points.
-        - amplitude: Amplitude of the source.
-        - frequency: Frequency of the source.
         - nt: Number of time steps.
         - dt: Time step size.
+        - dr, dz: Grid spacing.
         - ist: Shifting of the source time function.
+        - max_freq: Maximum frequency of the source.
+        - scaling_factor: Scaling factor of the source.
         """
 
         if nt <= 0 or dt <= 0:
@@ -36,11 +37,6 @@ class Source:
         self.ir = ir
         self.iz = iz
         self.iwidth = iwidth
-        if iwidth % 2 == 0:
-            self.slice = slice(ir - iwidth // 2, ir + iwidth // 2)
-        else:
-            self.slice = slice(ir - iwidth // 2, ir + iwidth // 2 + 1)
-
         self.nt = nt
         self.dt = dt
         self.dr = dr
@@ -55,11 +51,31 @@ class Source:
         self.phase_profile = np.zeros(self.profile.shape, dtype=np.int16)
         self.response = np.zeros(nt)
 
-    def generate_profile(self, alpha: float = 0.7):
+    def generate_profile(self, alpha: float = 0.5):
+        """
+        Generates the spatial source profile.
+
+        Args:
+            alpha (float, optional): The alpha value used in the Tukey window function. Defaults to 0.5.
+
+        Returns:
+            numpy.ndarray: The generated source profile.
+        """
         profile_r = tukey(self.iwidth * 2, alpha)[self.iwidth :]
         return profile_r
 
     def set_focus(self, r: float, z: float, c0: float):
+        """
+        Set the focus of the source at the given coordinates (r, z) and calculate the phase profile based on the speed of sound (c0).
+
+        Parameters:
+            r (float): The r-coordinate of the focus.
+            z (float): The z-coordinate of the focus.
+            c0 (float): The speed of sound.
+
+        Returns:
+            None
+        """
         self.r_focus = r
         self.z_focus = z
 
@@ -71,6 +87,21 @@ class Source:
         self.phase_profile = time_phase_index.T
 
     def plot_info(self, model: Model = None):
+        """
+        Plot the information of the source.
+
+        This function creates a subplot mosaic with four subplots: 'profile', 'phase_profile', 'response', and 'domain'.
+        The 'profile' subplot displays the spatial source profile.
+        The 'phase_profile' subplot displays the time shift index of the phase profile due to focus.
+        The 'response' subplot displays the amplitude of the response.
+        The 'domain' subplot displays the sigma values of the model, if provided.
+
+        Parameters:
+            model (Model, optional): The model object containing the sigma values. Defaults to None.
+
+        Returns:
+            None
+        """
         fig, axes = plt.subplot_mosaic(
             [
                 ["profile", "domain"],
@@ -199,7 +230,6 @@ class SimpleSource(Source):
         src /= src.max()
         width = self.iwidth * self.dr
         src *= self.max_freq * self.amplitude / width
-        # src *= self.amplitude
         return src
 
 
@@ -236,7 +266,6 @@ class RickerSource(Source):
         src /= src.max()
         width = self.iwidth * self.dr
         src *= self.max_freq * self.amplitude / width
-        # src *= self.amplitude
         return src
 
 
@@ -314,10 +343,7 @@ class ParametricSource(Source):
         cos_term = np.cos(
             2 * np.pi * self.frequency1 * (time_range - self.ist * self.dt)
         ) + np.cos(2 * np.pi * self.frequency2 * (time_range - self.ist * self.dt))
-        # src = (
-        #     np.exp(-self.pulse_width * (time_range - self.ist * self.dt) ** 2)
-        #     * cos_term
-        # )
+
         window_term = nuttall(self.pulse_length)
         window_term = np.pad(
             window_term, (self.ist, self.nt - self.ist - len(window_term))
@@ -325,5 +351,4 @@ class ParametricSource(Source):
         src = cos_term * window_term
         width = self.iwidth * self.dr
         src *= self.max_freq * self.amplitude / width
-        # src *= self.amplitude
         return src
