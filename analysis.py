@@ -22,46 +22,6 @@ class SimulationResult:
         self.subsample_time = subsample_time
         self.subsample_space = subsample_space
 
-    def plot_slices_space(self, window_size: int = None, vlimit: float = None):
-        # Unpack variables
-        p = self.p
-        subsample_time = self.subsample_time
-        dz = self.model.dz * self.subsample_space
-
-        fig, ax = plt.subplots(2, 3, figsize=(10, 10))
-
-        z_values = np.arange(0, p.shape[2] * dz, dz)
-
-        if window_size is None:
-            window_size = p.shape[2] / 10
-        if vlimit is None:
-            vlimit = p.max()
-        iterations = np.linspace(0, p.shape[0] - 1, 6, dtype=np.int64)
-        itr = 0
-        for i in range(ax.shape[0]):
-            for j in range(ax.shape[1]):
-                to_plot = iterations[itr]
-
-                max_index = np.argmax(p[to_plot, 2, :])
-                idx1 = int(max_index - window_size)
-                idx2 = int(max_index + window_size)
-
-                ax[i, j].plot(z_values[idx1:idx2], p[to_plot, 2, idx1:idx2])
-                # fig.colorbar(im, shrink=0.3)
-                # fig.colorbar(im, shrink=0.8)
-                ax[i, j].set_title(
-                    f"Time: {to_plot * self.model.dt * self.subsample_time}"
-                )
-                ax[i, j].set_xlabel("z (m)")
-                ax[i, j].set_ylabel("p (Pa)")
-                ax[i, j].set_ylim(-vlimit, vlimit)
-                itr += 1
-        # plt.subplots_adjust(wspace=0.4,
-        #                     hspace=-0.8)
-
-        plt.tight_layout()
-        plt.plot()
-
     def plot_slices_time(self, window_size: int = None, vlimit: float = None):
         # Unpack variables
         p = self.p
@@ -159,54 +119,6 @@ class SimulationResult:
         plt.tight_layout()
         plt.show()
 
-    def plot_snapshots_3d(self, vlimit: float = None, cmap: str = "jet"):
-        # Unpack variables
-        p = self.p
-        subsample_time = self.subsample_time
-        dr = self.model.dr * self.subsample_space
-        dt = self.model.dt * self.subsample_time
-
-        x = np.linspace(0, p.shape[1] * dr, p.shape[1])
-        z = np.linspace(0, p.shape[2] * dr, p.shape[2])
-        X, Z = np.meshgrid(x, z)
-
-        # Plot snapshots of result
-        fig, ax = plt.subplots(2, 3, figsize=(10, 10), subplot_kw={"projection": "3d"})
-
-        if vlimit is None:
-            vlimit = p.max()
-
-        iterations = np.linspace(0, p.shape[0] - 1, 6, dtype=np.int64)
-        itr = 0
-        for i in range(ax.shape[0]):
-            for j in range(ax.shape[1]):
-                to_plot = iterations[itr]
-
-                # Plot snapshot of pressure field
-                im = ax[i, j].plot_surface(
-                    X,
-                    Z,
-                    p[to_plot, :, :].T,
-                    linewidth=0,
-                    rstride=1,
-                    cmap=cmap,
-                    vmin=-vlimit,
-                    vmax=vlimit,
-                )
-
-                # fig.colorbar(im, shrink=0.3)
-                # fig.colorbar(im, shrink=0.8)
-                ax[i, j].set_zlim(-vlimit, vlimit)
-                ax[i, j].set_title(f"Iteration: {to_plot*subsample_time}")
-                ax[i, j].set_xlabel("r (m)")
-                ax[i, j].set_ylabel("z (m)")
-                itr += 1
-
-        # plt.subplots_adjust(wspace=0.4,
-        #                     hspace=-0.8)
-        # plt.tight_layout()
-        plt.show()
-
     def generate_gif(
         self,
         filename: str,
@@ -251,74 +163,6 @@ class SimulationResult:
             update,
             frames=tqdm(range(num_frames)),
             interval=1e3 / fps,
-        )
-
-        # Save the animation as a GIF
-        ani.save(filename, writer="pillow", fps=fps)  # Adjust FPS as needed
-        plt.close()
-
-    def generate_gif_3d(
-        self,
-        filename: str,
-        fps: int = 5,
-        frame_interval: int = 10,
-        vlimit: float = None,
-        cmap: str = "jet",
-    ):
-        # Create a figure and axis
-        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-        if vlimit is None:
-            vlimit = self.p.max()
-
-        p = self.p
-        dr = self.model.dr * self.subsample_space
-        dz = self.model.dz * self.subsample_space
-        dt = self.model.dt * self.subsample_time
-
-        x = np.linspace(0, p.shape[1] * dr, p.shape[1])
-        z = np.linspace(0, p.shape[2] * dz, p.shape[2])
-        X, Z = np.meshgrid(x, z)
-
-        # Initialize the image plot
-        image = ax.plot_surface(
-            X,
-            Z,
-            self.p[0, :, :].T,
-            linewidth=0,
-            rstride=1,
-            cmap=cmap,
-            vmin=-vlimit,
-            vmax=vlimit,
-        )
-        ax.set_zlim(-vlimit, vlimit)
-
-        plt.xlabel("x (m)")
-        plt.ylabel("z (m)")
-
-        # Update function for the animation
-        def update(frame):
-            index = frame * frame_interval
-
-            ax.cla()
-            image = ax.plot_surface(
-                X,
-                Z,
-                self.p[index, :, :].T,
-                linewidth=0,
-                rstride=1,
-                cmap=cmap,
-                vmin=-vlimit,
-                vmax=vlimit,
-            )
-            ax.set_zlim(-vlimit, vlimit)
-            return (image,)
-
-        num_frames = p.shape[0] // frame_interval
-
-        # Create the animation
-        ani = FuncAnimation(
-            fig, update, frames=tqdm(range(num_frames)), interval=1e3 / fps
         )
 
         # Save the animation as a GIF
@@ -629,30 +473,3 @@ def get_dB_response(
     if normalize:
         dB_response -= dB_response.max()
     return freq_array, dB_response
-
-
-if __name__ == "__main__":
-    pass
-    # from simulation import Model
-
-    # nrd, nyd, nzd = 100, 100, 100
-    # nt = 10
-    # A = np.zeros((10, 100, 100, 100))
-    # model = Model(nrd, nyd, nzd, nt, 1, 1, 1, 1, 1, 1)
-    # result = SimulationResult(A, model, [])
-
-    # selected, x, y, z = result.select_line(
-    #     x_start=A.shape[2] // 2,
-    #     y_start=0,
-    #     z_start=0,
-    #     angle_xy=np.radians(0),
-    #     angle_z=np.radians(0),
-    # )
-    # # print(x, y, z)
-
-    # A[:, x, y, z] = 1
-
-    # import matplotlib.pyplot as plt
-
-    # plt.imshow(A[0, :, 0, :].T)
-    # plt.show()
