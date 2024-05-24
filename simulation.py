@@ -227,6 +227,8 @@ class FDTD_sim:
     ) -> SimulationResult:
         if type not in ["linear", "nonlinear"]:
             raise ValueError(f"Invalid type: {type} not in ('linear', 'nonlinear')")
+        if len(self.sources) == 0:
+            print("Warning: No sources added, only propagating initial pressure.")
 
         p_saved = self.propagate_cuda(type=type)
 
