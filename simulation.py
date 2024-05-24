@@ -2,10 +2,9 @@ import numpy as np
 from tqdm import tqdm
 from numba import cuda
 
-from analysis import SimulationResult
 from model import Model
 from sources import Source
-from filtering import lp_filter, lp_filter2, lp_butter_filter
+from filtering import lp_filter
 
 from cuda_kernels_2D import (
     propagation_kernel_2D,
@@ -13,6 +12,22 @@ from cuda_kernels_2D import (
     update_phi_psi_kernel_2D,
     exchange_p_kernel_2D,
 )
+
+
+class SimulationResult:
+    def __init__(
+        self,
+        p: np.ndarray,
+        model: Model,
+        sources: list[Source],
+        subsample_space: int,
+        subsample_time: int,
+    ) -> None:
+        self.p = p
+        self.model = model
+        self.sources = sources
+        self.subsample_space = subsample_space
+        self.subsample_time = subsample_time
 
 
 class FDTD_sim:
@@ -24,20 +39,20 @@ class FDTD_sim:
 
         Parameters:
         - model (Model): An instance of the Model class representing the simulation parameters.
+        - subsample_space (int, optional): The spatial subsampling step size. Defaults to 1.
+        - subsample_time (int, optional): The temporal subsampling step size. Defaults to 1.
 
         Attributes:
         - model (Model): An instance of the Model class representing the simulation parameters.
         - sources (list): A list to store sources added to the simulation.
-        - time_order (int): The order of the temporal scheme used in the simulation.
 
         """
         self.model = model
         self.sources = []
-        self.time_order = 6
         self.subsample_space = subsample_space
         self.subsample_time = subsample_time
-        self.init_p = None
-        self.it0 = 0
+        self.init_p = None  # Used for domain extension
+        self.it0 = 0  # Used for domain extension
         if subsample_time > subsample_space:
             print(
                 "Warning: subsample_time is larger than subsample_space. Domain extension may not be possible."
@@ -48,9 +63,10 @@ class FDTD_sim:
         Adds a source to the simulation.
 
         Parameters:
-        - source: An object representing the source to be added.
+        - source (Source): An object representing the source to be added.
 
         """
+        # Nyquist frequency check
         if source.max_freq > 2 / self.model.dt:
             print(
                 f"WARNING! Model dt: ({self.model.dt}) too large for source frequency ({source.max_freq})!"
@@ -58,8 +74,6 @@ class FDTD_sim:
         self.sources.append(source)
 
     def set_initial_pressure(self, p: np.ndarray):
-        # if p.shape[1] != self.model.nr or p.shape[2] != self.model.nz:
-        #     raise ValueError("Initial pressure field must be of size (nt_init, nr, nz)")
         self.init_p = p
         self.it0 = self.init_p.shape[0]
 
@@ -91,8 +105,6 @@ class FDTD_sim:
         pml_width = self.model.pml_width
         domain_slice_r = slice(2, nr - pml_width, self.subsample_space)
         domain_slice_z = slice(pml_width, nz - pml_width, self.subsample_space)
-        # domain_slice_r = slice(0, None, self.subsample_space)
-        # domain_slice_z = slice(0, None, self.subsample_space)
         if pml_width == 0:
             domain_slice_r = slice(2, -2, self.subsample_space)
             domain_slice_z = slice(2, -2, self.subsample_space)
@@ -149,7 +161,7 @@ class FDTD_sim:
             self.model.diffusivity,
         )
 
-        # Initialize source
+        # Initialize source data
         source = self.sources[0]
         source_response_d = cuda.to_device(source.response)
         source_profile_d = cuda.to_device(source.profile)
@@ -166,6 +178,7 @@ class FDTD_sim:
         # Initialize stream
         stream = cuda.stream()
 
+        # Allocate memory for data copy
         p_current = np.zeros((nr, nz))
 
         for it in tqdm(range(self.it0, nt)):
@@ -212,13 +225,10 @@ class FDTD_sim:
         self,
         type: str = "linear",
     ) -> SimulationResult:
-
-        if type == "linear":
-            p_saved = self.propagate_cuda(type="linear")
-        elif type == "nonlinear":
-            p_saved = self.propagate_cuda(type="nonlinear")
-        else:
+        if type not in ["linear", "nonlinear"]:
             raise ValueError(f"Invalid type: {type} not in ('linear', 'nonlinear')")
+
+        p_saved = self.propagate_cuda(type=type)
 
         result = SimulationResult(
             p_saved,
@@ -239,15 +249,16 @@ def extend_domain(
     additional_subsampling: int = 1,
 ):
     """
-    Given a simulation_result, extend the domain by subsampling, filtering and propagating linearly.
+    Given a SimulationResult, extend the domain by subsampling, filtering and propagating linearly.
     Make sure that the initial wave propagated the full domain.
 
     Args:
-        simulation_result (SimulationResult): SimulationResult object.
+        result_init (SimulationResult): SimulationResult object to extend.
         extend_from (int): Time index from which to extend propagation.
         depth_multiplier (float): Factor by which to extend depth.
         width_multiplier (float): Factor by which to extend width.
         cutoff (float, optional): Cutoff frequency for the filter. Defaults to -1.
+        additional_subsampling (int, optional): Additional spatial subsampling factor. Defaults to 1.
 
     Returns:
         SimulationResult: Final simulation result.
@@ -257,18 +268,10 @@ def extend_domain(
             result_init.sources[0].frequency2 - result_init.sources[0].frequency1
         )
 
-    # # Filter and subsample time
-    # p_filtered_subsampled = lp_butter_filter(
-    #     result_init.p, result_init.model.dt, cutoff=cutoff, order=2
-    # )[
-    #     :: result_init.subsample_space
-    # ]  # TODO implement better filter
-
     # Filter and subsample time
     p_filtered = lp_filter(
         result_init.p, result_init.model.dt * result_init.subsample_time, cutoff=cutoff
     )
-    # p_filtered = result_init.p
 
     # Create new model
     pml_width = int(2 * result_init.model.pml_width / result_init.subsample_space)
@@ -304,7 +307,6 @@ def extend_domain(
     new_sim.set_initial_pressure(p_filtered[:extend_from])
 
     # Add dummy source
-    # new_source = Source(0, pml_width, 10, model_extended.nt, 1, 1, 1, 1, 1)
     new_source = result_init.sources[0]
     new_source.scaling_factor *= result_init.subsample_time
     new_source.response *= 0

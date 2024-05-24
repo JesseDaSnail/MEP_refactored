@@ -5,22 +5,16 @@ from tqdm import tqdm
 import cupy as cp
 from model import Model
 from sources import Source
+from simulation import SimulationResult
 
 
-class SimulationResult:
-    def __init__(
-        self,
-        p: np.ndarray,
-        model: Model,
-        sources: list[Source],
-        subsample_space: int,
-        subsample_time: int,
-    ) -> None:
-        self.p = p
-        self.model = model
-        self.sources = sources
-        self.subsample_time = subsample_time
-        self.subsample_space = subsample_space
+class SimulationResultAnalyser:
+    def __init__(self, simulation_result: SimulationResult):
+        self.p = simulation_result.p
+        self.model = simulation_result.model
+        self.sources = simulation_result.sources
+        self.subsample_space = simulation_result.subsample_space
+        self.subsample_time = simulation_result.subsample_time
 
     def plot_slices_time(self, window_size: int = None, vlimit: float = None):
         """
@@ -442,7 +436,7 @@ class SimulationResult:
         return frequencies[: frequencies.size // 2], lobe_array[: frequencies.size // 2]
 
     def get_lobes_all_split(
-        self, scaling_factor: float, subsample: int = 1
+        self, scaling_factor: float, subsample_space: int = 1
     ) -> np.ndarray:
         """
         Same as `get_lobes_all` but splits the domain to make it more memory efficient.
@@ -467,7 +461,7 @@ class SimulationResult:
         p = self.p
         dt = self.model.dt * self.subsample_time
 
-        p_subsampled = p[:, ::subsample, ::subsample]
+        p_subsampled = p[:, ::subsample_space, ::subsample_space]
 
         frequencies = np.fft.fftfreq(p.shape[0], dt)
         lobe_array = np.zeros(p_subsampled.shape)

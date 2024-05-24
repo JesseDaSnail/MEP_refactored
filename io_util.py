@@ -1,7 +1,7 @@
 import tkinter
 from tkinter import filedialog
 import pickle
-from analysis import SimulationResult
+from simulation import SimulationResult
 
 
 def get_file_path():
