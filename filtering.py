@@ -39,6 +39,7 @@ def lp_filter(p, dt, cutoff):
 
 
 def lp_filter2(p, dt, cutoff):
+    raise NotImplementedError("lp_filter2 is not implemented yet")
     mem_max = 0.3e9
     factor = 1
     if p.nbytes > mem_max:
@@ -79,6 +80,7 @@ def lp_filter2(p, dt, cutoff):
 
 # TODO better filter
 def lp_butter_filter(p, dt, cutoff, order=2):
+    raise NotImplementedError("lp_butter_filter is not implemented yet")
     mem_max = 1e9
     if p.nbytes > mem_max:
         factor = p.nbytes / mem_max
