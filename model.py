@@ -29,8 +29,8 @@ class Model:
         - dt (float): Time step size.
         - c0 (float): Wave velocity in the medium.
         - beta (float): Coefficient of nonlinearity.
-        - rho0 (float): Reference density of the medium.
-        - diffusivity (float): Diffusivity parameter for wave propagation.
+        - rho0 (float): Density of the medium.
+        - diffusivity (float): Diffusivity parameter for attenuation.
         """
 
         self.nr = nr
