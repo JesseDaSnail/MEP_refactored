@@ -169,13 +169,18 @@ class SimulationResultAnalyser:
         # Initialize the image plot
         image = ax.imshow(
             self.p[0, :, :].T,
-            extent=[0, p.shape[1] * dr, p.shape[2] * dz, 0],
+            extent=[
+                -p.shape[1] * dr if mirror else 0,
+                p.shape[1] * dr,
+                p.shape[2] * dz,
+                0,
+            ],
             origin="upper",
             vmin=-vlimit,
             vmax=vlimit,
         )
 
-        plt.xlabel("x (m)")
+        plt.xlabel("r (m)")
         plt.ylabel("z (m)")
 
         # Update function for the animation
