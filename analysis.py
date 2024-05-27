@@ -141,6 +141,7 @@ class SimulationResultAnalyser:
         fps: int = 5,
         frame_interval: int = 10,
         vlimit: float = None,
+        mirror: bool = False,
     ):
         """
         Generates a GIF animation from the pressure field data.
@@ -180,7 +181,12 @@ class SimulationResultAnalyser:
         # Update function for the animation
         def update(frame):
             index = frame * frame_interval
-            image.set_array(self.p[index, :, :].T)
+            current_frame = self.p[index, :, :].T
+            if mirror:
+                current_frame = np.concatenate(
+                    (np.flip(current_frame, axis=1), current_frame), axis=1
+                )
+            image.set_array(current_frame)
             return (image,)
 
         num_frames = p.shape[0] // frame_interval
