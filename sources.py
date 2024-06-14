@@ -113,18 +113,18 @@ class Source:
 
         axes["profile"].plot(self.profile)
         axes["profile"].set_title("Profile")
-        axes["profile"].set_ylabel("Amplitude")
-        axes["profile"].set_xlabel("Space index")
+        axes["profile"].set_ylabel("Amplitude multiplier")
+        axes["profile"].set_xlabel("r index")
 
         axes["phase_profile"].plot(self.phase_profile)
         axes["phase_profile"].set_title("Phase Profile")
         axes["phase_profile"].set_ylabel("Time shift index")
-        axes["phase_profile"].set_xlabel("Space index")
+        axes["phase_profile"].set_xlabel("r index")
 
         axes["response"].plot(np.arange(0, self.nt) * self.dt, self.response)
         axes["response"].set_title("Response")
         axes["response"].set_ylabel("Amplitude")
-        axes["response"].set_xlabel("Time index")
+        axes["response"].set_xlabel("Time (s)")
 
         if model is not None:
             axes["domain"].imshow(
@@ -154,6 +154,16 @@ class Source:
 
         plt.tight_layout()
         plt.show()
+
+    def __str__(self) -> str:
+        return (
+            f"Source:\n"
+            f"  ir={self.ir}\n"
+            f"  iz={self.iz}\n"
+            f"  iwidth={self.iwidth} / {self.iwidth * self.dr} m\n"
+            f"  pulse_length={self.pulse_length}\n"
+            f"  max_freq={self.max_freq}\n"
+        )
 
 
 class CosineSource(Source):
