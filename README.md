@@ -30,6 +30,6 @@ To run the simulation, I prefer using a jupyter notebook. This makes it possible
 
 [io_util.py](io_util.py) contains functions to save and load "SimulationResult" objects using pickle. This prevents the need to rerun long simulations.
 
-
+[main_domain_extender.ipynb](main_domain_extender.ipynb) is a jupyter notebook that can be used to perform domain extension on a SimulationResult obtained from the main simulation.
 
 
