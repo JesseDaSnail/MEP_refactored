@@ -426,8 +426,11 @@ class SimulationResultAnalyser:
         mem_max = 1e9
         if self.p.nbytes > mem_max:
             factor = self.p.nbytes / mem_max
-            subsample_space = int(np.ceil(factor))
-            print(f"Array too large for GPU. Setting subsample to {subsample_space}.")
+            if subsample_space < factor:
+                subsample_space = int(np.ceil(factor))
+                print(
+                    f"Array too large for GPU. Setting subsample to {subsample_space}."
+                )
 
         p = self.p
         dt = self.model.dt * self.subsample_time
