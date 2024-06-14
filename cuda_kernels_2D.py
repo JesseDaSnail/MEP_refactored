@@ -41,6 +41,7 @@ def propagation_kernel_2D(
             nonlinear_term = beta / (rho0 * c0**2) * dpdt2
             p[0, ir, iz] += nonlinear_term
 
+        # Add attenuation
         attenuation = (
             diffusivity
             / c0**2
@@ -73,14 +74,15 @@ def propagation_kernel_2D(
             source_profile[ir - source_ir] * source_response[time_index] * c0**2 * dt**2
         )
 
-    # if iz == 0:
-    #     p[0, ir, 0] = p[0, ir, 3]
-    # if iz == 1:
-    #     p[0, ir, 1] = p[0, ir, 2]
+    # Boundary conditions (mirror across r=0)
     if ir == 0 and iz > 1 and iz < nz - 2:
         p[0, 0, iz] = p[0, 3, iz]
     if ir == 1 and iz > 1 and iz < nz - 2:
         p[0, 1, iz] = p[0, 2, iz]
+    # if iz == 0:
+    #     p[0, ir, 0] = p[0, ir, 3]
+    # if iz == 1:
+    #     p[0, ir, 1] = p[0, ir, 2]
 
 
 @cuda.jit(device=True)
@@ -176,18 +178,19 @@ def calc_dphi_dpsi_kernel_2D(
             )
             - dp_term_z
         )
-    # if iz == 0:
-    #     for i in range(4, 8):
-    #         phipsi[i, ir, 0] = phipsi[i, ir, 3]
-    # if iz == 1:
-    #     for i in range(4, 8):
-    #         phipsi[i, ir, 1] = phipsi[i, ir, 2]
+
     if ir == 0 and iz > 1 and iz < nz - 2:
         for i in range(4, 8):
             phipsi[i, 0, iz] = phipsi[i, 3, iz]
     if ir == 1 and iz > 1 and iz < nz - 2:
         for i in range(4, 8):
             phipsi[i, 1, iz] = phipsi[i, 2, iz]
+    # if iz == 0:
+    #     for i in range(4, 8):
+    #         phipsi[i, ir, 0] = phipsi[i, ir, 3]
+    # if iz == 1:
+    #     for i in range(4, 8):
+    #         phipsi[i, ir, 1] = phipsi[i, ir, 2]
 
 
 @cuda.jit
@@ -206,19 +209,18 @@ def update_phi_psi_kernel_2D(
         phipsi[2, ir, iz] += phipsi[6, ir, iz] * dt
         phipsi[3, ir, iz] += phipsi[7, ir, iz] * dt
 
-    # if iz == 0:
-    #     for i in range(4):
-    #         phipsi[i, ir, 0] = phipsi[i, ir, 3]
-    # if iz == 1:
-    #     for i in range(4):
-    #         phipsi[i, ir, 1] = phipsi[i, ir, 2]
-
     if ir == 0 and iz > 1 and iz < nz - 2:
         for i in range(4):
             phipsi[i, 0, iz] = phipsi[i, 3, iz]
     if ir == 1 and iz > 1 and iz < nz - 2:
         for i in range(4):
             phipsi[i, 1, iz] = phipsi[i, 2, iz]
+    # if iz == 0:
+    #     for i in range(4):
+    #         phipsi[i, ir, 0] = phipsi[i, ir, 3]
+    # if iz == 1:
+    #     for i in range(4):
+    #         phipsi[i, ir, 1] = phipsi[i, ir, 2]
 
 
 @cuda.jit

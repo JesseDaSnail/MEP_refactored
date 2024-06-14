@@ -225,6 +225,15 @@ class FDTD_sim:
         self,
         type: str = "linear",
     ) -> SimulationResult:
+        """
+        The main function to run the simulation with CUDA.
+
+        Args:
+            type (str, optional): The type of propagation. Can be either "linear" or "nonlinear". Defaults to "linear".
+
+        Returns:
+            SimulationResult: The result of the simulation.
+        """
         if type not in ["linear", "nonlinear"]:
             raise ValueError(f"Invalid type: {type} not in ('linear', 'nonlinear')")
         if len(self.sources) == 0:

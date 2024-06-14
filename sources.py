@@ -221,7 +221,7 @@ class SimpleSource(Source):
         dz: float,
         ist: int,
     ) -> None:
-        raise NotImplementedError("SimpleSource is not implemented yet")
+        raise NotImplementedError("SimpleSource is not implemented correctly yet.")
         super().__init__(ir, iz, iwidth, nt, dt, dr, dz, ist, frequency)
         self.amplitude = amplitude
         self.frequency = frequency
@@ -257,7 +257,7 @@ class RickerSource(Source):
         dz: float,
         ist: int,
     ) -> None:
-        raise NotImplementedError("RickerSource is not implemented yet")
+        raise NotImplementedError("RickerSource is not implemented correctly yet.")
         super().__init__(ir, iz, iwidth, nt, dt, dr, dz, ist, frequency)
         self.amplitude = amplitude
         self.frequency = frequency
@@ -293,7 +293,7 @@ class OscillatorSource(Source):
         dz: float,
         ist: int,
     ) -> None:
-        raise NotImplementedError("OscillatorSource is not implemented yet")
+        raise NotImplementedError("OscillatorSource is not implemented correctly yet.")
         super().__init__(ir, iz, iwidth, nt, dt, dr, dz, ist, frequency)
         self.amplitude = amplitude
         self.frequency = frequency

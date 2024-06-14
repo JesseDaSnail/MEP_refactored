@@ -5,6 +5,18 @@ from scipy import signal
 
 
 def lp_filter(p, dt, cutoff):
+    """
+    Filters a pressure field with a simple low-pass filter.
+    Uses cupy FFT to compute the fourier transforms. Frequencies above the cutoff are set to 0.
+
+    Args:
+        p (numpy.ndarray): Pressure field to filter
+        dt (float): Time step
+        cutoff (float): Cutoff frequency
+    Returns:
+        p (numpy.ndarray): Filtered pressure field
+
+    """
     mem_max = 1e9
     factor = 1
     if p.nbytes > mem_max:
