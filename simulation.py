@@ -123,8 +123,8 @@ class FDTD_sim:
         if self.init_p is not None:
             p_saved[
                 : self.init_p.shape[0] // self.subsample_time,
-                : np.ceil(self.init_p.shape[1] / self.subsample_space),
-                : np.ceil(self.init_p.shape[2] / self.subsample_space),
+                : np.ceil(self.init_p.shape[1] / self.subsample_space).astype(np.int32),
+                : np.ceil(self.init_p.shape[2] / self.subsample_space).astype(np.int32),
             ] = self.init_p[
                 :: self.subsample_time, :: self.subsample_space, :: self.subsample_space
             ]
