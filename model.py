@@ -82,11 +82,9 @@ class Model:
         self.pml_width = pml_width
         self.nrd = self.nr - 1 * pml_width - 2 - 2 * (pml_width == 0)
         self.nzd = self.nz - 2 * pml_width - 4 * (pml_width == 0)
-        # self.nrd = self.nr
-        # self.nzd = self.nz
 
         distances = distance_transform_edt(pml_mask, return_distances=True)
-        sigma_mag = self.c0 / self.dr / 2
+        sigma_mag = self.c0 / self.dr / 10
         self.sigma = (
             sigma_mag
             * self.pml_mask
